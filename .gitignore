@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+Infravox_AI_Internship_Assignments*.docx
+Infravox_AI_Assignment*.zip
+
+
+!reviews/*.json
+!reviews/.gitkeep
