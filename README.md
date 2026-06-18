@@ -100,7 +100,3 @@ The three provided assignment diffs remain covered by tests, but future diffs ca
 Groq is available for future enrichment and health checks, but deterministic checks are the reliable baseline so the assignment artifacts remain reproducible.
 
 The part I am happiest with is the hybrid shape: deterministic rules make the planted-bug evaluation reliable, while the LangGraph agent boundaries keep the system easy to extend for Groq-powered review of new diffs. With one more day, I would add a stronger strict-JSON LLM enrichment pass and golden-file evaluations for a fourth unseen diff.
-
-## AI Assistance Note
-
-This project was built with AI coding assistance. The implementation is intentionally small, typed, and test-covered so it can be explained and modified during a live interview.
