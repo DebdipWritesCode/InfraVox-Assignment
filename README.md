@@ -77,7 +77,8 @@ The Streamlit UI reads the local `diffs/` files, posts the selected diff to `POS
 
 ## Architecture
 
-The core pipeline is a LangGraph `StateGraph`:
+The core pipeline is a LangGraph `StateGraph` that parses the diff once, fans out to five
+specialist reviewer agents, then merges their structured findings:
 
 ```text
 START -> parse_diff
@@ -89,7 +90,17 @@ parse_diff -> test_coverage_reviewer
 all specialist reviewers -> merge_findings -> END
 ```
 
-Each specialist reviewer is an AI agent with a category-specific Groq prompt. The deterministic checks provide seed findings and a no-key fallback, but the configured live path sends each specialist dimension through its own LLM call. The merge node deduplicates findings, assigns stable IDs, computes severity and verdict, and emits the exact `ReviewReport` contract from the assignment.
+Each specialist reviewer is an AI agent with a category-specific Groq prompt. Inside each
+reviewer node, a deterministic rules layer first produces seed findings for that category.
+Those seed findings are included in the Groq prompt so the LLM can validate them and add
+additional high-confidence findings. If Groq is disabled, unavailable, or returns no valid
+structured findings while the rules layer found issues, the deterministic findings are used as
+the fallback output.
+
+Before sending a prompt to Groq, the prompt builder redacts common secret-like tokens such as
+Stripe, Groq, GitHub, and Slack token prefixes. The merge node deduplicates findings, assigns
+stable IDs, computes severity and verdict, and emits the exact `ReviewReport` contract from the
+assignment.
 
 ## Future Diff Support
 
@@ -99,4 +110,4 @@ The three provided assignment diffs remain covered by tests, but future diffs ca
 
 Groq is used inside the five specialist reviewer agents when configured, while deterministic checks remain the fallback layer so assignment artifacts and automated tests stay reproducible.
 
-The part I am happiest with is the hybrid shape: the five LangGraph reviewer agents are Groq-backed for the live AI review, while deterministic fallback checks protect planted-bug recall and make local testing reliable. With one more day, I would add golden-file evaluations for a fourth unseen diff and compare fallback-only versus LLM-agent recall.
+The part I am happiest with is the hybrid shape: the five LangGraph reviewer agents are Groq-backed for the live AI review, while deterministic fallback checks protect planted-bug recall and make local testing reliable. With one more day, I would make the rules engine tighter by adding more checks, edge cases, and language-specific patterns for unseen diffs.
