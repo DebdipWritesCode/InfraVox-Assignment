@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import infravox_reviewer.graph as graph_module
 from infravox_reviewer.graph import run_review_pipeline
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -62,3 +63,65 @@ def test_pipeline_preserves_assignment_issue_class_coverage():
 
         assert categories <= {finding.category.value for finding in report.findings}
         assert report.verdict == "request_changes"
+
+
+def test_pipeline_invokes_each_specialist_ai_reviewer(monkeypatch):
+    calls = []
+
+    def fake_ai_specialist_reviewer(
+        *,
+        agent_name,
+        category,
+        responsibility,
+        diff,
+        language,
+        context,
+        lines,
+        fallback_findings,
+    ):
+        calls.append(
+            {
+                "agent_name": agent_name,
+                "category": category,
+                "responsibility": responsibility,
+                "diff": diff,
+                "language": language,
+                "context": context,
+                "line_count": len(lines),
+                "fallback_count": len(fallback_findings),
+            }
+        )
+        return fallback_findings
+
+    monkeypatch.setattr(
+        graph_module,
+        "ai_specialist_reviewer",
+        fake_ai_specialist_reviewer,
+        raising=False,
+    )
+
+    report = graph_module.run_review_pipeline(
+        diff=(FIXTURES / "diff1_python.txt").read_text(),
+        language="python",
+        context="Add refund endpoint",
+    )
+
+    assert sorted(call["agent_name"] for call in calls) == [
+        "correctness_reviewer",
+        "performance_reviewer",
+        "security_reviewer",
+        "style_reviewer",
+        "test_coverage_reviewer",
+    ]
+    assert {call["category"] for call in calls} == {
+        "security",
+        "performance",
+        "correctness",
+        "style",
+        "test_coverage",
+    }
+    assert all(call["diff"] == (FIXTURES / "diff1_python.txt").read_text() for call in calls)
+    assert all(call["language"] == "python" for call in calls)
+    assert all(call["context"] == "Add refund endpoint" for call in calls)
+    assert all(call["line_count"] > 0 for call in calls)
+    assert sum(call["fallback_count"] for call in calls) == len(report.findings)

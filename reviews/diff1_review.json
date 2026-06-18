@@ -36,16 +36,26 @@
     },
     {
       "id": "F-004",
-      "line": 8,
-      "line_content": "def process_refund(request):",
-      "category": "security",
+      "line": 6,
+      "line_content": "query = f\"SELECT * FROM transactions WHERE user_id = {user_id}\"",
+      "category": "performance",
       "severity": "high",
-      "title": "Authorization check missing for sensitive operation",
-      "description": "The code performs a sensitive mutation without a visible ownership, role, or token validation check.",
-      "suggestion": "Check that the authenticated caller is allowed to perform this operation before changing state."
+      "title": "N+1 Query Issue",
+      "description": "The `get_transaction` function executes a separate query for each transaction lookup, leading to N+1 queries. This can be optimized by using a single query with a JOIN or a subquery.",
+      "suggestion": "Use a single query with a JOIN or a subquery to fetch all transactions for a user in a single database operation."
     },
     {
       "id": "F-005",
+      "line": 7,
+      "line_content": "def get_transaction(user_id, transaction_id):",
+      "category": "security",
+      "severity": "high",
+      "title": "Unvalidated input for user-controlled data",
+      "description": "The function accepts user-controlled data (user_id and transaction_id) without validation, which can lead to potential security issues.",
+      "suggestion": "Validate user-controlled input to prevent potential security issues."
+    },
+    {
+      "id": "F-006",
       "line": 11,
       "line_content": "refund_amount = transaction['amount']",
       "category": "correctness",
@@ -55,7 +65,17 @@
       "suggestion": "Check for a missing result before reading fields from the object."
     },
     {
-      "id": "F-006",
+      "id": "F-007",
+      "line": 14,
+      "line_content": "if transaction['status'] == 'completed':",
+      "category": "security",
+      "severity": "high",
+      "title": "Authorization check missing for sensitive operation",
+      "description": "The code performs a sensitive mutation without a visible ownership, role, or token validation check.",
+      "suggestion": "Check that the authenticated caller is allowed to perform this operation before changing state."
+    },
+    {
+      "id": "F-008",
       "line": 18,
       "line_content": "body = template.replace('{{message}}', message)",
       "category": "security",
@@ -65,7 +85,17 @@
       "suggestion": "Use an escaping-aware template renderer or HTML-escape the value."
     },
     {
-      "id": "F-007",
+      "id": "F-009",
+      "line": 20,
+      "line_content": "smtp.send(email, body)",
+      "category": "security",
+      "severity": "high",
+      "title": "Unvalidated input for email",
+      "description": "The function accepts user-controlled data (email) without validation, which can lead to potential security issues.",
+      "suggestion": "Validate user-controlled input to prevent potential security issues."
+    },
+    {
+      "id": "F-010",
       "line": 23,
       "line_content": "data = request.json",
       "category": "correctness",
@@ -75,7 +105,47 @@
       "suggestion": "Validate required fields and types before using request data."
     },
     {
-      "id": "F-008",
+      "id": "F-011",
+      "line": 24,
+      "line_content": "@app.route('/refunds', methods=['POST'])",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "New endpoint needs tests",
+      "description": "The new refund endpoint is added, but there are no tests to ensure its correctness.",
+      "suggestion": "Write tests for the refund endpoint to cover different scenarios, such as valid and invalid requests."
+    },
+    {
+      "id": "F-012",
+      "line": 25,
+      "line_content": "if transaction['status'] == 'completed':",
+      "category": "correctness",
+      "severity": "high",
+      "title": "Possible null dereference after lookup",
+      "description": "A lookup result is dereferenced without a visible not-found guard.",
+      "suggestion": "Check for a missing result before reading fields from the object."
+    },
+    {
+      "id": "F-013",
+      "line": 27,
+      "line_content": "db.execute(\"UPDATE transactions SET status='refunded' WHERE id=\" + str(transaction['id']))",
+      "category": "correctness",
+      "severity": "high",
+      "title": "SQL query is vulnerable to SQL injection",
+      "description": "User input is directly concatenated into a SQL query, which can lead to SQL injection attacks.",
+      "suggestion": "Use parameterized queries or an ORM to prevent SQL injection."
+    },
+    {
+      "id": "F-014",
+      "line": 27,
+      "line_content": "STRIPE_SECRET_KEY = 'STRIPE_LIVE_SECRET_REDACTED'",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "Sensitive data needs to be mocked or tested",
+      "description": "The Stripe secret key is hardcoded, which is a security risk. It should be mocked or tested to ensure it's not exposed.",
+      "suggestion": "Mock the Stripe secret key or write tests to ensure it's not exposed."
+    },
+    {
+      "id": "F-015",
       "line": 8,
       "line_content": "def process_refund(request):",
       "category": "test_coverage",
@@ -85,7 +155,27 @@
       "suggestion": "Add tests for repeated or invalid state transitions and side-effect failure handling."
     },
     {
-      "id": "F-009",
+      "id": "F-016",
+      "line": 14,
+      "line_content": "db.execute(\"UPDATE transactions SET status='refunded' WHERE id=\" + str(transaction['id']))",
+      "category": "performance",
+      "severity": "medium",
+      "title": "Missing Index Implied by Query Pattern",
+      "description": "The `UPDATE` query is not using an index on the `id` column, which can lead to slower performance for large datasets. Consider adding an index on the `id` column.",
+      "suggestion": "Add an index on the `id` column to improve query performance."
+    },
+    {
+      "id": "F-017",
+      "line": 14,
+      "line_content": "query += f\" AND transaction_id = {transaction_id}\"",
+      "category": "style",
+      "severity": "medium",
+      "title": "Concatenating SQL queries",
+      "description": "SQL queries should be parameterized to prevent SQL injection attacks. Instead of concatenating queries, use parameterized queries or an ORM.",
+      "suggestion": "Use parameterized queries or an ORM like SQLAlchemy."
+    },
+    {
+      "id": "F-018",
       "line": 17,
       "line_content": "template = open('templates/email.html').read()",
       "category": "correctness",
@@ -93,6 +183,36 @@
       "title": "File opened without context manager",
       "description": "The file handle is opened and read without a context manager.",
       "suggestion": "Use a `with open(...) as file:` block so the handle is closed."
+    },
+    {
+      "id": "F-019",
+      "line": 20,
+      "line_content": "template = open('templates/email.html').read()",
+      "category": "performance",
+      "severity": "medium",
+      "title": "Repeated Expensive Operation",
+      "description": "The `send_notification` function reads the email template from disk every time it's called. Consider caching the template to improve performance.",
+      "suggestion": "Cache the email template to avoid repeated disk reads."
+    },
+    {
+      "id": "F-020",
+      "line": 20,
+      "line_content": "db.execute(\"UPDATE transactions SET status='refunded' WHERE id=\" + str(transaction['id']))",
+      "category": "style",
+      "severity": "medium",
+      "title": "Concatenating SQL queries",
+      "description": "SQL queries should be parameterized to prevent SQL injection attacks. Instead of concatenating queries, use parameterized queries or an ORM.",
+      "suggestion": "Use parameterized queries or an ORM like SQLAlchemy."
+    },
+    {
+      "id": "F-021",
+      "line": 25,
+      "line_content": "template = open('templates/email.html').read()",
+      "category": "style",
+      "severity": "low",
+      "title": "File I/O in a function",
+      "description": "Opening a file in a function can lead to file descriptor leaks. Consider using a context manager or reading the file once and storing the content.",
+      "suggestion": "Use a context manager or read the file once and store the content."
     }
   ],
   "positive_observations": [
@@ -100,14 +220,16 @@
     "The changes are organized around clear functions, which makes targeted fixes straightforward."
   ],
   "missing_tests": [
+    "Write tests for the refund endpoint to cover different scenarios, such as valid and invalid requests.",
+    "Mock the Stripe secret key or write tests to ensure it's not exposed.",
     "Add tests for repeated or invalid state transitions and side-effect failure handling."
   ],
   "agent_findings_count": {
-    "security": 5,
-    "performance": 0,
-    "correctness": 3,
-    "style": 0,
-    "test_coverage": 1
+    "security": 7,
+    "performance": 3,
+    "correctness": 5,
+    "style": 3,
+    "test_coverage": 3
   },
-  "processing_time_ms": 4
+  "processing_time_ms": 1660
 }

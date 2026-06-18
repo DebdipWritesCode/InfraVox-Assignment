@@ -18,7 +18,7 @@ Add your Groq key to `.env` before live LLM-backed testing:
 GROQ_API_KEY=your_groq_api_key_here
 ```
 
-The deterministic reviewers work without an API key, which keeps local tests and the provided assignment diffs reproducible. When `GROQ_API_KEY` is present, the project is ready for Groq/LangChain augmentation and `/health` reports that connectivity can be checked. The default model is `llama-3.1-8b-instant`, Groq's current replacement for the assignment brief's deprecated `llama3-8b-8192` model.
+The deterministic fallback checks work without an API key, which keeps local tests and the provided assignment diffs reproducible. When `GROQ_API_KEY` is present and `ENABLE_LLM_REVIEW=true`, each of the five specialist reviewer agents calls Groq through LangChain. The default model is `llama-3.1-8b-instant`, Groq's current replacement for the assignment brief's deprecated `llama3-8b-8192` model.
 
 ## API
 
@@ -86,10 +86,10 @@ parse_diff -> performance_reviewer
 parse_diff -> correctness_reviewer
 parse_diff -> style_reviewer
 parse_diff -> test_coverage_reviewer
-all reviewers -> merge_findings -> END
+all specialist reviewers -> merge_findings -> END
 ```
 
-Each specialist reviewer produces structured `Finding` objects. The merge node deduplicates findings, assigns stable IDs, computes severity and verdict, and emits the exact `ReviewReport` contract from the assignment.
+Each specialist reviewer is an AI agent with a category-specific Groq prompt. The deterministic checks provide seed findings and a no-key fallback, but the configured live path sends each specialist dimension through its own LLM call. The merge node deduplicates findings, assigns stable IDs, computes severity and verdict, and emits the exact `ReviewReport` contract from the assignment.
 
 ## Future Diff Support
 
@@ -97,6 +97,6 @@ The reviewer does not hand-edit or hardcode the generated JSON files. The baseli
 
 The three provided assignment diffs remain covered by tests, but future diffs can also be added to `diffs/` as `*.diff`, `*.patch`, or assignment-style `diff*.txt` files. `scripts/run_reviews.py` infers language from assignment filenames or common extensions such as `.py.diff`, `.js.patch`, and `.ts.diff`.
 
-Groq is available for future enrichment and health checks, but deterministic checks are the reliable baseline so the assignment artifacts remain reproducible.
+Groq is used inside the five specialist reviewer agents when configured, while deterministic checks remain the fallback layer so assignment artifacts and automated tests stay reproducible.
 
-The part I am happiest with is the hybrid shape: deterministic rules make the planted-bug evaluation reliable, while the LangGraph agent boundaries keep the system easy to extend for Groq-powered review of new diffs. With one more day, I would add a stronger strict-JSON LLM enrichment pass and golden-file evaluations for a fourth unseen diff.
+The part I am happiest with is the hybrid shape: the five LangGraph reviewer agents are Groq-backed for the live AI review, while deterministic fallback checks protect planted-bug recall and make local testing reliable. With one more day, I would add golden-file evaluations for a fourth unseen diff and compare fallback-only versus LLM-agent recall.

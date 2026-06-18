@@ -26,6 +26,26 @@
     },
     {
       "id": "F-003",
+      "line": 5,
+      "line_content": "const user = await db.query('SELECT * FROM users WHERE id = ?', [id]);",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "Missing test case for bulk fetch with no users",
+      "description": "The getUsers function does not handle the case where no users are returned from the database. This should be tested to ensure the correct response is returned.",
+      "suggestion": "Add a test case to verify the correct response is returned when no users are returned from the database"
+    },
+    {
+      "id": "F-004",
+      "line": 5,
+      "line_content": "const user = await db.query('SELECT * FROM users WHERE id = ?', [id]);",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "Missing test case for invalid user ID",
+      "description": "The getUsers function does not handle the case where the user ID is invalid. This should be tested to ensure the correct error response is returned.",
+      "suggestion": "Add a test case to verify the correct error response is returned when the user ID is invalid"
+    },
+    {
+      "id": "F-005",
       "line": 7,
       "line_content": "for (const id of userIds) {",
       "category": "performance",
@@ -35,7 +55,7 @@
       "suggestion": "Use Promise.all or a bounded concurrency helper for independent work."
     },
     {
-      "id": "F-004",
+      "id": "F-006",
       "line": 7,
       "line_content": "for (const id of userIds) {",
       "category": "performance",
@@ -45,7 +65,7 @@
       "suggestion": "Batch the lookup with an IN query or equivalent bulk API."
     },
     {
-      "id": "F-005",
+      "id": "F-007",
       "line": 14,
       "line_content": "async function resetPassword(req, res) {",
       "category": "security",
@@ -55,7 +75,37 @@
       "suggestion": "Check that the authenticated caller is allowed to perform this operation before changing state."
     },
     {
-      "id": "F-006",
+      "id": "F-008",
+      "line": 14,
+      "line_content": "if (user.length > 0) {",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "Missing test case for user not found",
+      "description": "The resetPassword function does not handle the case where the user is not found. This should be tested to ensure the correct error response is returned.",
+      "suggestion": "Add a test case to verify the 404 response is returned when the user is not found"
+    },
+    {
+      "id": "F-009",
+      "line": 25,
+      "line_content": "const enriched = logs.map(log => {",
+      "category": "test_coverage",
+      "severity": "high",
+      "title": "Missing test case for user not found in activity logs",
+      "description": "The getUserActivity function does not handle the case where the user is not found in the activity logs. This should be tested to ensure the correct error response is returned.",
+      "suggestion": "Add a test case to verify the correct error response is returned when the user is not found in the activity logs"
+    },
+    {
+      "id": "F-010",
+      "line": 5,
+      "line_content": "async function getUsers(req, res) {",
+      "category": "style",
+      "severity": "medium",
+      "title": "Function name is not descriptive",
+      "description": "The function name 'getUsers' could be more descriptive. Consider renaming it to something like 'fetchUsersByIds' to improve code readability.",
+      "suggestion": "Rename the function to 'fetchUsersByIds'"
+    },
+    {
+      "id": "F-011",
       "line": 9,
       "line_content": "users.push(user[0]);",
       "category": "correctness",
@@ -65,7 +115,47 @@
       "suggestion": "Handle missing rows explicitly before adding them to the response."
     },
     {
-      "id": "F-007",
+      "id": "F-012",
+      "line": 11,
+      "line_content": "async function resetPassword(req, res) {",
+      "category": "style",
+      "severity": "medium",
+      "title": "Function name is not descriptive",
+      "description": "The function name 'resetPassword' could be more descriptive. Consider renaming it to something like 'updateUserPassword' to improve code readability.",
+      "suggestion": "Rename the function to 'updateUserPassword'"
+    },
+    {
+      "id": "F-013",
+      "line": 14,
+      "line_content": "const user = await db.query('SELECT * FROM users WHERE id = ?', [id]);",
+      "category": "style",
+      "severity": "medium",
+      "title": "Unclear variable name",
+      "description": "The variable name 'user' is not descriptive. Consider renaming it to something like 'foundUser' to improve code readability.",
+      "suggestion": "Rename the variable to 'foundUser'"
+    },
+    {
+      "id": "F-014",
+      "line": 21,
+      "line_content": "async function getUserActivity(req, res) {",
+      "category": "style",
+      "severity": "medium",
+      "title": "Function name is not descriptive",
+      "description": "The function name 'getUserActivity' could be more descriptive. Consider renaming it to something like 'fetchUserActivityLogs' to improve code readability.",
+      "suggestion": "Rename the function to 'fetchUserActivityLogs'"
+    },
+    {
+      "id": "F-015",
+      "line": 25,
+      "line_content": "const user = await db.query('SELECT * FROM users WHERE email = ?', [email]);",
+      "category": "style",
+      "severity": "medium",
+      "title": "Unclear variable name",
+      "description": "The variable name 'user' is not descriptive. Consider renaming it to something like 'foundUser' to improve code readability.",
+      "suggestion": "Rename the variable to 'foundUser'"
+    },
+    {
+      "id": "F-016",
       "line": 32,
       "line_content": "return { ...log, user: users[log.user_id] };",
       "category": "performance",
@@ -73,19 +163,44 @@
       "title": "Undefined related-record lookup in enrichment",
       "description": "The enrichment references a related-record lookup that is not declared in the local scope, which can throw and often points to missing batch-loading.",
       "suggestion": "Load related records explicitly and key them by ID before enrichment."
+    },
+    {
+      "id": "F-017",
+      "line": 34,
+      "line_content": "const user = users[log.user_id];",
+      "category": "style",
+      "severity": "medium",
+      "title": "Unclear variable name",
+      "description": "The variable name 'user' is not descriptive. Consider renaming it to something like 'foundUser' to improve code readability.",
+      "suggestion": "Rename the variable to 'foundUser'"
+    },
+    {
+      "id": "F-018",
+      "line": 1,
+      "line_content": "// userController.js - PR: Add bulk fetch and fix password reset",
+      "category": "style",
+      "severity": "low",
+      "title": "Comment is not necessary",
+      "description": "The comment is not necessary as the file name already indicates the purpose of the file.",
+      "suggestion": "Remove the comment"
     }
   ],
   "positive_observations": [
     "The diff is small enough for a focused javascript line-level review.",
     "The changes are organized around clear functions, which makes targeted fixes straightforward."
   ],
-  "missing_tests": [],
+  "missing_tests": [
+    "Add a test case to verify the correct response is returned when no users are returned from the database",
+    "Add a test case to verify the correct error response is returned when the user ID is invalid",
+    "Add a test case to verify the 404 response is returned when the user is not found",
+    "Add a test case to verify the correct error response is returned when the user is not found in the activity logs"
+  ],
   "agent_findings_count": {
     "security": 2,
     "performance": 3,
     "correctness": 2,
-    "style": 0,
-    "test_coverage": 0
+    "style": 7,
+    "test_coverage": 4
   },
-  "processing_time_ms": 4
+  "processing_time_ms": 29499
 }

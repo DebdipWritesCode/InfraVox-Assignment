@@ -8,6 +8,7 @@ from typing import TypedDict
 import warnings
 
 from .diff_parser import extract_added_lines
+from .llm_review import ai_specialist_reviewer
 from .models import Category, DiffLine, Finding, ReviewReport, Severity, Verdict
 from .reviewers import (
     correctness_reviewer,
@@ -47,29 +48,128 @@ SEVERITY_RANK = {
     "low": 3,
 }
 
+AGENT_RESPONSIBILITIES = {
+    Category.security.value: (
+        "Find security vulnerabilities: SQL injection, hardcoded credentials, unsafe "
+        "deserialization, unvalidated inputs, IDOR risks, exposed secrets. For each finding, "
+        "produce a line number, a plain-English description of the vulnerability, and why it "
+        "is exploitable. Be paranoid."
+    ),
+    Category.performance.value: (
+        "Find performance issues: N+1 queries, missing indexes implied by query patterns, "
+        "unnecessary loops over large collections, synchronous calls that should be async, "
+        "memory leaks, and repeated expensive operations that should be cached. Focus on "
+        "issues that hurt at scale, not micro-optimizations."
+    ),
+    Category.correctness.value: (
+        "Find logical bugs and edge cases: missing null or undefined checks, off-by-one "
+        "errors, incorrect error handling, race conditions, missing input validation, and "
+        "incorrect boolean logic. Focus on bugs that can cause production failures."
+    ),
+    Category.style.value: (
+        "Find code quality issues: functions that are too long and should be split, unclear "
+        "variable names, missing or incorrect docstrings, dead code, magic numbers, and "
+        "duplicated logic that should be extracted. Only flag issues that genuinely hurt "
+        "readability or maintainability."
+    ),
+    Category.test_coverage.value: (
+        "Analyse what the diff adds or changes and identify what is not tested: new code "
+        "paths with no corresponding test, edge cases existing tests miss, error paths that "
+        "are not covered, and mocked dependencies that mask real integration issues. Output "
+        "specific suggestions for tests that should be written."
+    ),
+}
+
 
 def _parse_diff_node(state: ReviewState) -> ReviewState:
     return {"lines": extract_added_lines(state["diff"])}
 
 
 def _security_node(state: ReviewState) -> ReviewState:
-    return {"security_findings": security_reviewer(state["lines"], state["language"])}
+    fallback_findings = security_reviewer(state["lines"], state["language"])
+    return {
+        "security_findings": ai_specialist_reviewer(
+            agent_name="security_reviewer",
+            category=Category.security.value,
+            responsibility=AGENT_RESPONSIBILITIES[Category.security.value],
+            diff=state["diff"],
+            language=state["language"],
+            context=state.get("context"),
+            lines=state["lines"],
+            fallback_findings=fallback_findings,
+        )
+    }
 
 
 def _performance_node(state: ReviewState) -> ReviewState:
-    return {"performance_findings": performance_reviewer(state["lines"], state["language"])}
+    fallback_findings = performance_reviewer(state["lines"], state["language"])
+    return {
+        "performance_findings": ai_specialist_reviewer(
+            agent_name="performance_reviewer",
+            category=Category.performance.value,
+            responsibility=AGENT_RESPONSIBILITIES[Category.performance.value],
+            diff=state["diff"],
+            language=state["language"],
+            context=state.get("context"),
+            lines=state["lines"],
+            fallback_findings=fallback_findings,
+        )
+    }
 
 
 def _correctness_node(state: ReviewState) -> ReviewState:
-    return {"correctness_findings": correctness_reviewer(state["lines"], state["language"])}
+    fallback_findings = correctness_reviewer(state["lines"], state["language"])
+    return {
+        "correctness_findings": ai_specialist_reviewer(
+            agent_name="correctness_reviewer",
+            category=Category.correctness.value,
+            responsibility=AGENT_RESPONSIBILITIES[Category.correctness.value],
+            diff=state["diff"],
+            language=state["language"],
+            context=state.get("context"),
+            lines=state["lines"],
+            fallback_findings=fallback_findings,
+        )
+    }
 
 
 def _style_node(state: ReviewState) -> ReviewState:
-    return {"style_findings": style_reviewer(state["lines"], state["language"])}
+    fallback_findings = style_reviewer(state["lines"], state["language"])
+    return {
+        "style_findings": ai_specialist_reviewer(
+            agent_name="style_reviewer",
+            category=Category.style.value,
+            responsibility=AGENT_RESPONSIBILITIES[Category.style.value],
+            diff=state["diff"],
+            language=state["language"],
+            context=state.get("context"),
+            lines=state["lines"],
+            fallback_findings=fallback_findings,
+        )
+    }
 
 
 def _test_coverage_node(state: ReviewState) -> ReviewState:
-    return {"test_coverage_findings": test_coverage_reviewer(state["lines"], state["language"])}
+    fallback_findings = test_coverage_reviewer(state["lines"], state["language"])
+    return {
+        "test_coverage_findings": ai_specialist_reviewer(
+            agent_name="test_coverage_reviewer",
+            category=Category.test_coverage.value,
+            responsibility=AGENT_RESPONSIBILITIES[Category.test_coverage.value],
+            diff=state["diff"],
+            language=state["language"],
+            context=state.get("context"),
+            lines=state["lines"],
+            fallback_findings=fallback_findings,
+        )
+    }
+
+
+def _baseline_findings(state: ReviewState) -> list[Finding]:
+    all_findings: list[Finding] = []
+    for key in REVIEWER_KEYS.values():
+        all_findings.extend(state.get(key, []))
+    return all_findings
 
 
 def _summarize_pr(diff: str, language: str, context: str | None) -> str:
@@ -139,9 +239,7 @@ def _verdict_for_severity(overall_severity: Severity) -> tuple[Verdict, str]:
 
 
 def _merge_findings_node(state: ReviewState) -> ReviewState:
-    all_findings: list[Finding] = []
-    for key in REVIEWER_KEYS.values():
-        all_findings.extend(state.get(key, []))
+    all_findings = _baseline_findings(state)
 
     findings = _sort_findings(_deduplicate_findings(all_findings))
     numbered_findings = [
@@ -167,7 +265,14 @@ def _merge_findings_node(state: ReviewState) -> ReviewState:
         positive_observations=_positive_observations(state["language"]),
         missing_tests=missing_tests,
         agent_findings_count={
-            category: len(state.get(key, [])) for category, key in REVIEWER_KEYS.items()
+            category: len(
+                [
+                    finding
+                    for finding in numbered_findings
+                    if finding.category.value == category
+                ]
+            )
+            for category in REVIEWER_KEYS
         },
         processing_time_ms=processing_time_ms,
     )
