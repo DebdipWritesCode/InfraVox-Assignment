@@ -73,6 +73,23 @@ def test_security_reviewer_anchors_authorization_gap_to_sensitive_function():
     assert auth_finding.line == 3
 
 
+def test_security_reviewer_detects_missing_authorization_for_delete_mutation():
+    diff = """diff --git a/accounts.js b/accounts.js
+--- a/accounts.js
++++ b/accounts.js
+@@ -1,0 +1,6 @@
++async function deleteAccount(req, res) {
++  const accountId = req.params.id;
++  await db.query('DELETE FROM accounts WHERE id = ?', [accountId]);
++  res.json({ ok: true });
++}
+"""
+
+    findings = security_reviewer(extract_added_lines(diff), "javascript")
+
+    assert "Authorization check missing for sensitive operation" in _titles(findings)
+
+
 def test_correctness_reviewer_detects_generic_missing_null_check_and_unvalidated_json():
     diff = """diff --git a/orders.py b/orders.py
 --- a/orders.py

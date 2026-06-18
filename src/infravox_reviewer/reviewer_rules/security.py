@@ -56,7 +56,8 @@ def _auth_sensitive_function(lines: list[DiffLine]) -> DiffLine | None:
             continue
         window = " ".join(item.content.lower() for item in lines[index : index + 8])
         mutates_sensitive_state = any(
-            term in window for term in ("update ", "save(", "status =", "refund", "password")
+            term in window
+            for term in ("update ", "delete ", "save(", "status =", "refund", "password")
         )
         has_auth_check = any(term in window for term in auth_terms)
         if mutates_sensitive_state and not has_auth_check:

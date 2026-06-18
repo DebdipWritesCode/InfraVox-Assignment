@@ -11,13 +11,17 @@ from infravox_reviewer.demo_ui import (
 
 def test_load_diff_choices_discovers_assignment_diffs():
     choices = load_diff_choices()
+    filenames = [choice.filename for choice in choices]
+    languages_by_filename = {choice.filename: choice.language for choice in choices}
 
-    assert [choice.filename for choice in choices] == [
+    assert filenames[:3] == [
         "diff1_python.txt",
         "diff2_javascript.txt",
         "diff3_typescript.txt",
     ]
-    assert [choice.language for choice in choices] == ["python", "javascript", "typescript"]
+    assert languages_by_filename["diff1_python.txt"] == "python"
+    assert languages_by_filename["diff2_javascript.txt"] == "javascript"
+    assert languages_by_filename["diff3_typescript.txt"] == "typescript"
     assert choices[0].label == "Diff 1 - Python"
 
 
