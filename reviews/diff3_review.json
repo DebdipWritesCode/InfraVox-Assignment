@@ -1,0 +1,93 @@
+{
+  "pr_summary": "Add order cancellation and status polling.",
+  "verdict": "request_changes",
+  "verdict_reason": "The diff contains high-risk findings that should be fixed before merge.",
+  "overall_severity": "critical",
+  "findings": [
+    {
+      "id": "F-001",
+      "line": 13,
+      "line_content": "while (status === 'pending') {",
+      "category": "performance",
+      "severity": "critical",
+      "title": "Unbounded polling loop",
+      "description": "The polling loop has no timeout, max attempts, or cancellation path.",
+      "suggestion": "Add a deadline, max retry count, or cancellation signal."
+    },
+    {
+      "id": "F-002",
+      "line": 3,
+      "line_content": "export async function cancelOrder(orderId: string, userId: string): Promise<void> {",
+      "category": "security",
+      "severity": "high",
+      "title": "Authorization check missing for sensitive operation",
+      "description": "The code performs a sensitive mutation without a visible ownership, role, or token validation check.",
+      "suggestion": "Check that the authenticated caller is allowed to perform this operation before changing state."
+    },
+    {
+      "id": "F-003",
+      "line": 5,
+      "line_content": "order.status = 'cancelled';",
+      "category": "correctness",
+      "severity": "high",
+      "title": "Possible null dereference after lookup",
+      "description": "A lookup result is dereferenced without a visible not-found guard.",
+      "suggestion": "Check for a missing result before reading fields from the object."
+    },
+    {
+      "id": "F-004",
+      "line": 22,
+      "line_content": "for (const id of orderIds) {",
+      "category": "performance",
+      "severity": "high",
+      "title": "Await inside loop serializes independent work",
+      "description": "Awaiting inside the loop makes independent operations run one after another instead of concurrently.",
+      "suggestion": "Use Promise.all or a bounded concurrency helper for independent work."
+    },
+    {
+      "id": "F-005",
+      "line": 29,
+      "line_content": "return price * (1 - discounts[discountCode]);",
+      "category": "correctness",
+      "severity": "high",
+      "title": "Unknown map key can produce invalid result",
+      "description": "A dynamic key is read from a map without validating that the key exists.",
+      "suggestion": "Validate the key or provide an explicit fallback before calculating."
+    },
+    {
+      "id": "F-006",
+      "line": 3,
+      "line_content": "export async function cancelOrder(orderId: string, userId: string): Promise<void> {",
+      "category": "test_coverage",
+      "severity": "medium",
+      "title": "State transition side effects need tests",
+      "description": "The diff changes persisted state and triggers an external side effect, but does not show tests for repeated transitions or side-effect failure.",
+      "suggestion": "Add tests for repeated or invalid state transitions and side-effect failure handling."
+    },
+    {
+      "id": "F-007",
+      "line": 28,
+      "line_content": "const discounts: any = { SAVE10: 0.1, SAVE20: 0.2, SAVE50: 0.5 };",
+      "category": "style",
+      "severity": "medium",
+      "title": "Avoid any for newly added value",
+      "description": "The new code uses `any`, which bypasses TypeScript type checking.",
+      "suggestion": "Replace `any` with a specific type, union, or safer unknown shape."
+    }
+  ],
+  "positive_observations": [
+    "The diff is small enough for a focused typescript line-level review.",
+    "The changes are organized around clear functions, which makes targeted fixes straightforward."
+  ],
+  "missing_tests": [
+    "Add tests for repeated or invalid state transitions and side-effect failure handling."
+  ],
+  "agent_findings_count": {
+    "security": 1,
+    "performance": 2,
+    "correctness": 2,
+    "style": 1,
+    "test_coverage": 1
+  },
+  "processing_time_ms": 4
+}

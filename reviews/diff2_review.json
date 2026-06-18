@@ -1,0 +1,91 @@
+{
+  "pr_summary": "Add bulk user fetch and fix password reset.",
+  "verdict": "request_changes",
+  "verdict_reason": "The diff contains high-risk findings that should be fixed before merge.",
+  "overall_severity": "critical",
+  "findings": [
+    {
+      "id": "F-001",
+      "line": 18,
+      "line_content": "await db.query('UPDATE users SET password = ? WHERE email = ?',",
+      "category": "security",
+      "severity": "critical",
+      "title": "Password update stores un-hashed password input",
+      "description": "The password update writes password input without evidence of hashing.",
+      "suggestion": "Hash passwords with bcrypt or argon2 before storing them."
+    },
+    {
+      "id": "F-002",
+      "line": 5,
+      "line_content": "const userIds = ids.split(',');",
+      "category": "correctness",
+      "severity": "high",
+      "title": "Missing query parameter validation",
+      "description": "The code calls a string method on query input without a type check.",
+      "suggestion": "Validate the query parameter exists and is a string before parsing it."
+    },
+    {
+      "id": "F-003",
+      "line": 7,
+      "line_content": "for (const id of userIds) {",
+      "category": "performance",
+      "severity": "high",
+      "title": "Await inside loop serializes independent work",
+      "description": "Awaiting inside the loop makes independent operations run one after another instead of concurrently.",
+      "suggestion": "Use Promise.all or a bounded concurrency helper for independent work."
+    },
+    {
+      "id": "F-004",
+      "line": 7,
+      "line_content": "for (const id of userIds) {",
+      "category": "performance",
+      "severity": "high",
+      "title": "N+1 query in loop",
+      "description": "The loop performs a data lookup per item, which creates N database or repository calls for N inputs.",
+      "suggestion": "Batch the lookup with an IN query or equivalent bulk API."
+    },
+    {
+      "id": "F-005",
+      "line": 14,
+      "line_content": "async function resetPassword(req, res) {",
+      "category": "security",
+      "severity": "high",
+      "title": "Authorization check missing for sensitive operation",
+      "description": "The code performs a sensitive mutation without a visible ownership, role, or token validation check.",
+      "suggestion": "Check that the authenticated caller is allowed to perform this operation before changing state."
+    },
+    {
+      "id": "F-006",
+      "line": 9,
+      "line_content": "users.push(user[0]);",
+      "category": "correctness",
+      "severity": "medium",
+      "title": "Missing result handling",
+      "description": "The code uses the first result without checking whether a row exists.",
+      "suggestion": "Handle missing rows explicitly before adding them to the response."
+    },
+    {
+      "id": "F-007",
+      "line": 32,
+      "line_content": "return { ...log, user: users[log.user_id] };",
+      "category": "performance",
+      "severity": "medium",
+      "title": "Undefined related-record lookup in enrichment",
+      "description": "The enrichment references a related-record lookup that is not declared in the local scope, which can throw and often points to missing batch-loading.",
+      "suggestion": "Load related records explicitly and key them by ID before enrichment."
+    }
+  ],
+  "positive_observations": [
+    "The diff is small enough for a focused javascript line-level review.",
+    "The changes are organized around clear functions, which makes targeted fixes straightforward."
+  ],
+  "missing_tests": [],
+  "agent_findings_count": {
+    "security": 2,
+    "performance": 3,
+    "correctness": 2,
+    "style": 0,
+    "test_coverage": 0
+  },
+  "processing_time_ms": 4
+}
